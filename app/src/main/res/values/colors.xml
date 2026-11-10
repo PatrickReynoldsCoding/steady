@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg">#F3F5F7</color>
+    <color name="brand">#2C5A86</color>
+    <color name="ok">#2A7748</color>
+    <color name="ok_soft">#E0F0E6</color>
+    <color name="neutral_soft">#E6EBF0</color>
+    <color name="neutral">#16202A</color>
+    <color name="warn">#9A6200</color>
+    <color name="warn_soft">#F7ECD3</color>
+    <color name="stop">#AB3636</color>
+    <color name="stop_soft">#F6E0E0</color>
+</resources>
