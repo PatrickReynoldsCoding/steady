@@ -5,3 +5,5 @@ local.properties
 .idea/
 .kotlin/
 captures/
+# Exported health data for check-ins. Never committed.
+my-data/

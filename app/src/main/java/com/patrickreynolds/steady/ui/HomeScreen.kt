@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.patrickreynolds.steady.CheckIns
 import com.patrickreynolds.steady.analysis.Insights
 import com.patrickreynolds.steady.analysis.Patterns
 import com.patrickreynolds.steady.analysis.Quality
@@ -44,7 +45,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 @Composable
-fun HomeScreen(onStartReading: () -> Unit, onTrends: () -> Unit, onSettings: () -> Unit, onPickSensor: () -> Unit) {
+fun HomeScreen(onStartReading: () -> Unit, onTrends: () -> Unit, onSettings: () -> Unit, onPickSensor: () -> Unit, onGuide: () -> Unit) {
     val context = LocalContext.current
     val store = remember { Store.get(context) }
     val prefs = remember { Prefs.get(context) }
@@ -64,6 +65,13 @@ fun HomeScreen(onStartReading: () -> Unit, onTrends: () -> Unit, onSettings: () 
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text("Steady", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
             Text(today.format(DateTimeFormatter.ofPattern("EEEE d MMMM")), style = MaterialTheme.typography.headlineSmall)
+        }
+
+        UpdatePanel()
+
+        val firstReading = readings.filter { it.metrics.quality != Quality.POOR }.minOfOrNull { it.date }
+        CheckIns.due(goodMornings, firstReading, today, settings.checkInsDone)?.let { c ->
+            CheckInPanel(c, onGuide) { prefs.update { it.copy(checkInsDone = it.checkInsDone + c.number) } }
         }
 
         StatusPanel(goodMornings)
@@ -110,6 +118,9 @@ fun HomeScreen(onStartReading: () -> Unit, onTrends: () -> Unit, onSettings: () 
 
         InsightPanel(days, goodMornings)
 
+        OutlinedButton(onClick = onGuide, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp), shape = RoundedCornerShape(12.dp)) {
+            Text("Your plan: what to do and why", style = MaterialTheme.typography.labelLarge)
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedButton(onClick = onTrends, modifier = Modifier.weight(1f).heightIn(min = 56.dp), shape = RoundedCornerShape(12.dp)) {
                 Text("Trends", style = MaterialTheme.typography.labelLarge)
@@ -119,6 +130,24 @@ fun HomeScreen(onStartReading: () -> Unit, onTrends: () -> Unit, onSettings: () 
             }
         }
         Spacer(Modifier.height(8.dp))
+    }
+}
+
+@Composable
+private fun CheckInPanel(c: CheckIns.CheckIn, onGuide: () -> Unit, onDone: () -> Unit) {
+    Panel(color = LocalStateColors.current.warnSoft) {
+        Text(c.title, style = MaterialTheme.typography.titleLarge)
+        Text(c.body, style = MaterialTheme.typography.bodyLarge)
+        Text(
+            "1. Settings → Export data. Save it to your computer.\n2. Put it in steady/my-data.\n3. Open Claude Code in steady and type: Steady check-in",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            BigButton("Done", onDone, Modifier.weight(1f))
+            OutlinedButton(onClick = onGuide, modifier = Modifier.weight(1f).heightIn(min = 60.dp), shape = RoundedCornerShape(12.dp)) {
+                Text("Read plan", style = MaterialTheme.typography.labelLarge)
+            }
+        }
     }
 }
 

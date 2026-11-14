@@ -27,6 +27,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.patrickreynolds.steady.reminders.Reminders
 import com.patrickreynolds.steady.steps.PhoneSteps
+import com.patrickreynolds.steady.ui.GuideScreen
 import com.patrickreynolds.steady.ui.HomeScreen
 import com.patrickreynolds.steady.ui.ReadingScreen
 import com.patrickreynolds.steady.ui.SensorPickerScreen
@@ -35,7 +36,7 @@ import com.patrickreynolds.steady.ui.SteadyTheme
 import com.patrickreynolds.steady.ui.TrendsScreen
 import kotlinx.coroutines.launch
 
-enum class Screen { HOME, READING, TRENDS, SETTINGS, PICK_SENSOR }
+enum class Screen { HOME, READING, TRENDS, SETTINGS, PICK_SENSOR, GUIDE }
 
 class MainActivity : ComponentActivity() {
     /** Set when the morning notification is tapped: go straight to the reading. */
@@ -45,6 +46,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         handle(intent)
+        Updater.checkIfDue(applicationContext)
         setContent { SteadyTheme { SteadyApp(startReading) } }
     }
 
@@ -98,10 +100,12 @@ private fun SteadyApp(startReading: MutableState<Boolean>) {
                 onTrends = { screen = Screen.TRENDS },
                 onSettings = { screen = Screen.SETTINGS },
                 onPickSensor = { screen = Screen.PICK_SENSOR },
+                onGuide = { screen = Screen.GUIDE },
             )
             Screen.READING -> ReadingScreen(session, onClose = { session.cancel(); screen = Screen.HOME }, onRetry = { session.start() })
             Screen.TRENDS -> TrendsScreen(onBack = { screen = Screen.HOME })
-            Screen.SETTINGS -> SettingsScreen(onBack = { screen = Screen.HOME }, onPickSensor = { screen = Screen.PICK_SENSOR })
+            Screen.SETTINGS -> SettingsScreen(onBack = { screen = Screen.HOME }, onPickSensor = { screen = Screen.PICK_SENSOR }, onGuide = { screen = Screen.GUIDE })
+            Screen.GUIDE -> GuideScreen(onBack = { screen = Screen.HOME })
             Screen.PICK_SENSOR -> SensorPickerScreen(onDone = { screen = Screen.HOME }, onBack = { screen = Screen.SETTINGS })
         }
     }

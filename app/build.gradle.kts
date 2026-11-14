@@ -22,8 +22,9 @@ android {
         applicationId = "com.patrickreynolds.steady"
         minSdk = 31          // Android 12: the user's phone, and the Bluetooth permission model
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        // -Psteady.versionCode / -Psteady.versionName: for testing in-app updates with an older-numbered build.
+        versionCode = (findProperty("steady.versionCode") as String?)?.toInt() ?: 2
+        versionName = (findProperty("steady.versionName") as String?) ?: "0.2.0"
     }
     signingConfigs {
         if (signingProps.isNotEmpty()) create("release") {
@@ -47,7 +48,15 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     testOptions { unitTests.isReturnDefaultValues = true }
+    // GUIDE.md (the plan, at the top of the repo) is shown in the app, so there is one copy.
+    sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/guide"))
 }
+
+val guideAsset by tasks.registering(Sync::class) {
+    from(rootProject.file("GUIDE.md"))
+    into(layout.buildDirectory.dir("generated/guide"))
+}
+tasks.named("preBuild") { dependsOn(guideAsset) }
 
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.10.01"))

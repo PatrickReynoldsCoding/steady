@@ -8,7 +8,10 @@ The research behind it: [PEM Early Warning Research](https://claude.ai/artifact/
 
 **Not a medical device.** It is a personal tool that learns your own pattern.
 
-## Phase 1: Learn (this version, 0.1.0)
+**Using it?** Read [GUIDE.md](GUIDE.md): what to do each day, why, for how long, and when to check in.
+The same guide is in the app: *Your plan: what to do and why*.
+
+## Phase 1: Learn (0.1.0 and 0.2.0)
 
 Steady gives no warnings yet. It collects the data that warnings need, and answers one question:
 *does my body show anything in the days before a crash?*
@@ -57,6 +60,19 @@ What it shows:
     gradle testDebugUnitTest      # analysis, parser and step tests
     gradle assembleDebug
     gradle assembleRelease        # signed if a key is set up (STEADY_SIGNING, see app/build.gradle.kts)
+
+## Updates and releases
+
+Steady checks GitHub for a newer release when it opens, at most once a day, and offers it on the
+home screen (`Updater.kt`, the same updater as odo). For that to work, each release must:
+
+- be tagged `vX.Y.Z` and published (not a draft or pre-release),
+- have exactly one `.apk` asset, built with `gradle assembleRelease`,
+- be signed with the same key, and have a higher `versionCode`.
+
+To test an update, build an older-numbered copy: `gradle assembleRelease -Psteady.versionCode=1 -Psteady.versionName=0.1.9`.
+
+Exported health data for check-ins goes in `my-data/`, which git ignores.
 
 ## Next phases
 

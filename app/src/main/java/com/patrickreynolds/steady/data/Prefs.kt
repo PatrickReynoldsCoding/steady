@@ -16,6 +16,7 @@ data class Settings(
     val morningReminder: Boolean = false,
     val morningMinutes: Int = 8 * 60 + 30,
     val stepsAsked: Boolean = false,
+    val checkInsDone: Set<Int> = emptySet(),
 )
 
 class Prefs private constructor(context: Context) {
@@ -34,6 +35,7 @@ class Prefs private constructor(context: Context) {
         morningReminder = sp.getBoolean("morningReminder", false),
         morningMinutes = sp.getInt("morningMinutes", 8 * 60 + 30),
         stepsAsked = sp.getBoolean("stepsAsked", false),
+        checkInsDone = sp.getStringSet("checkInsDone", emptySet())!!.mapNotNull { it.toIntOrNull() }.toSet(),
     )
 
     fun update(change: (Settings) -> Settings) {
@@ -48,6 +50,7 @@ class Prefs private constructor(context: Context) {
             .putBoolean("morningReminder", s.morningReminder)
             .putInt("morningMinutes", s.morningMinutes)
             .putBoolean("stepsAsked", s.stepsAsked)
+            .putStringSet("checkInsDone", s.checkInsDone.map { it.toString() }.toSet())
             .apply()
         _settings.value = s
     }

@@ -44,7 +44,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onPickSensor: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onPickSensor: () -> Unit, onGuide: () -> Unit) {
     val context = LocalContext.current
     val prefs = remember { Prefs.get(context) }
     val s by prefs.settings.collectAsState()
@@ -71,6 +71,8 @@ fun SettingsScreen(onBack: () -> Unit, onPickSensor: () -> Unit) {
             Text("Settings", style = MaterialTheme.typography.headlineSmall)
             TextButton(onClick = onBack) { Text("Done") }
         }
+
+        BigButton("Your plan: what to do and why", onGuide)
 
         Section("Strap") {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
@@ -106,6 +108,8 @@ fun SettingsScreen(onBack: () -> Unit, onPickSensor: () -> Unit) {
             Text("Everything stays on this phone. Export gives you three CSV files: days, readings and raw beats.", style = MaterialTheme.typography.bodyMedium)
             BigButton("Export data", { Export.share(context) })
         }
+
+        UpdatesSection()
 
         Text(
             "Steady ${BuildConfig.VERSION_NAME}. A personal tool for pacing, not a medical device. " +
