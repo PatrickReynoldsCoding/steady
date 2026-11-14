@@ -74,10 +74,16 @@ object Updater {
     /** On opening the app: check, if that is on and the last check was a day or more ago. */
     fun checkIfDue(context: Context) {
         init(context)
+        // Android 11 and older restart the app when "Install unknown apps" is switched on, so the
+        // update in progress is forgotten. A flag survives that: check again and carry on installing.
+        if (prefs.getBoolean("resume", false) && state == State.Idle) {
+            prefs.edit().putBoolean("resume", false).apply()
+            if (context.packageManager.canRequestPackageInstalls()) { check(context, thenInstall = true); return }
+        }
         if (autoCheck && System.currentTimeMillis() - lastCheckMs > DAY_MS && state == State.Idle) check(context)
     }
 
-    fun check(context: Context) {
+    fun check(context: Context, thenInstall: Boolean = false) {
         init(context)
         if (state is State.Checking || state is State.Downloading || state is State.Installing) return
         state = State.Checking
@@ -91,6 +97,7 @@ object Updater {
                 com.patrickreynolds.steady.data.Prefs.get(context).update { it.copy(updateVersion = if (available) r!!.version else null) }
                 Status.refresh(context)
                 post(if (available) State.Available(r!!) else State.UpToDate(r?.version ?: BuildConfig.VERSION_NAME))
+                if (available && thenInstall) main.post { downloadAndInstall(context, r!!) }
             } catch (e: Exception) {
                 Log.w(TAG, "update check failed", e)
                 post(State.Failed("Could not reach GitHub: ${e.message ?: e.javaClass.simpleName}"))
@@ -153,6 +160,7 @@ object Updater {
     fun continueInstall(context: Context) {
         val s = state as? State.NeedsPermission ?: return
         if (!context.packageManager.canRequestPackageInstalls()) return
+        prefs.edit().putBoolean("resume", false).apply()
         state = State.Installing(s.release)
         worker.execute {
             try { install(context.applicationContext, s.release, s.apk) }
@@ -161,7 +169,12 @@ object Updater {
     }
 
     /** Android's page where this app is allowed to install apps (its updates). */
-    fun permissionSettings(context: Context) = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}"))
+    fun permissionSettings(context: Context): Intent {
+        prefs.edit().putBoolean("resume", true).commit()   // in case Android restarts the app (see checkIfDue)
+        return permissionIntent(context)
+    }
+
+    private fun permissionIntent(context: Context) = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}"))
 
     private fun download(r: Release, to: File) {
         val c = URL(r.apkUrl).openConnection() as HttpURLConnection   // follows GitHub's redirect to its file host

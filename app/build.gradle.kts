@@ -23,8 +23,8 @@ android {
         minSdk = 30          // Android 11: the Hisense A9 e-ink phone. The POCO runs 12.
         targetSdk = 35
         // -Psteady.versionCode / -Psteady.versionName: for testing in-app updates with an older-numbered build.
-        versionCode = (findProperty("steady.versionCode") as String?)?.toInt() ?: 3
-        versionName = (findProperty("steady.versionName") as String?) ?: "0.3.0"
+        versionCode = (findProperty("steady.versionCode") as String?)?.toInt() ?: 4
+        versionName = (findProperty("steady.versionName") as String?) ?: "0.3.1"
     }
     signingConfigs {
         if (signingProps.isNotEmpty()) create("release") {
