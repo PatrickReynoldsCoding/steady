@@ -28,7 +28,7 @@ fun Panel(modifier: Modifier = Modifier, color: Color = MaterialTheme.colorSchem
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
         color = color,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        border = BorderStroke(panelBorder, MaterialTheme.colorScheme.outline),
     ) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
     }
@@ -49,13 +49,16 @@ fun BigButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, 
 fun RatingButtons(onRate: (Rating) -> Unit) {
     val s = LocalStateColors.current
     val cs = MaterialTheme.colorScheme
+    val eink = LocalEink.current
     @Composable
     fun one(r: Rating, bg: Color, fg: Color, m: Modifier) = Button(
         onClick = { onRate(r) },
         modifier = m.heightIn(min = 58.dp),
         shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.buttonColors(containerColor = bg, contentColor = fg),
-    ) { Text(r.label, style = MaterialTheme.typography.labelLarge) }
+        // E-ink has no colours, so Crash gets a heavier border and a warning sign.
+        border = if (eink) BorderStroke(if (r == Rating.CRASH) 5.dp else 2.dp, Color.Black) else null,
+    ) { Text(if (eink && r == Rating.CRASH) "⚠ Crash" else r.label, style = MaterialTheme.typography.labelLarge) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             one(Rating.GOOD, s.okSoft, s.ok, Modifier.weight(1f))
@@ -65,6 +68,15 @@ fun RatingButtons(onRate: (Rating) -> Unit) {
             one(Rating.BAD, s.warnSoft, s.warn, Modifier.weight(1f))
             one(Rating.CRASH, s.stopSoft, s.stop, Modifier.weight(1f))
         }
+    }
+}
+
+/** Something is happening. A spinner, or still text on e-ink, where a spinner flickers. */
+@Composable
+fun Busy(text: String) {
+    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (!LocalEink.current) androidx.compose.material3.CircularProgressIndicator(Modifier.padding(4.dp))
+        Text(text, style = MaterialTheme.typography.bodyLarge)
     }
 }
 

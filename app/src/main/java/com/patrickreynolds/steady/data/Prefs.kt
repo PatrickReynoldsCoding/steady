@@ -17,6 +17,12 @@ data class Settings(
     val morningMinutes: Int = 8 * 60 + 30,
     val stepsAsked: Boolean = false,
     val checkInsDone: Set<Int> = emptySet(),
+    /** Check-ins already announced with a notification, so each is sent once. */
+    val checkInsNotified: Set<Int> = emptySet(),
+    /** "system", "light", "dark" or "eink". */
+    val theme: String = "system",
+    /** The newest release GitHub reported, for the widget. Null when up to date. */
+    val updateVersion: String? = null,
 )
 
 class Prefs private constructor(context: Context) {
@@ -36,8 +42,12 @@ class Prefs private constructor(context: Context) {
         morningMinutes = sp.getInt("morningMinutes", 8 * 60 + 30),
         stepsAsked = sp.getBoolean("stepsAsked", false),
         checkInsDone = sp.getStringSet("checkInsDone", emptySet())!!.mapNotNull { it.toIntOrNull() }.toSet(),
+        checkInsNotified = sp.getStringSet("checkInsNotified", emptySet())!!.mapNotNull { it.toIntOrNull() }.toSet(),
+        theme = sp.getString("theme", "system") ?: "system",
+        updateVersion = sp.getString("updateVersion", null),
     )
 
+    @Synchronized
     fun update(change: (Settings) -> Settings) {
         val s = change(current)
         sp.edit()
@@ -51,6 +61,9 @@ class Prefs private constructor(context: Context) {
             .putInt("morningMinutes", s.morningMinutes)
             .putBoolean("stepsAsked", s.stepsAsked)
             .putStringSet("checkInsDone", s.checkInsDone.map { it.toString() }.toSet())
+            .putStringSet("checkInsNotified", s.checkInsNotified.map { it.toString() }.toSet())
+            .putString("theme", s.theme)
+            .putString("updateVersion", s.updateVersion)
             .apply()
         _settings.value = s
     }

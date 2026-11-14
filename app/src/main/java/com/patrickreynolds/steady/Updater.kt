@@ -86,7 +86,11 @@ object Updater {
                 val r = latest()
                 val now = System.currentTimeMillis()
                 main.post { lastCheckMs = now; prefs.edit().putLong("last", now).apply() }
-                post(if (r != null && newer(r.version, BuildConfig.VERSION_NAME)) State.Available(r) else State.UpToDate(r?.version ?: BuildConfig.VERSION_NAME))
+                val available = r != null && newer(r.version, BuildConfig.VERSION_NAME)
+                // Remembered for the home-screen widget, which can't see this object's state.
+                com.patrickreynolds.steady.data.Prefs.get(context).update { it.copy(updateVersion = if (available) r!!.version else null) }
+                Status.refresh(context)
+                post(if (available) State.Available(r!!) else State.UpToDate(r?.version ?: BuildConfig.VERSION_NAME))
             } catch (e: Exception) {
                 Log.w(TAG, "update check failed", e)
                 post(State.Failed("Could not reach GitHub: ${e.message ?: e.javaClass.simpleName}"))
@@ -208,7 +212,7 @@ object Updater {
             setAppPackageName(context.packageName)
             setSize(apk.length())
             // An app updating itself may do so without a confirmation on Android 12+; Android asks anyway if it wants to.
-            setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
+            if (android.os.Build.VERSION.SDK_INT >= 31) setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
         }
         val id = installer.createSession(params)
         installer.openSession(id).use { s ->

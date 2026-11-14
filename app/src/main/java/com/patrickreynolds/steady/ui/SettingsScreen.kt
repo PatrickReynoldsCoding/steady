@@ -74,6 +74,25 @@ fun SettingsScreen(onBack: () -> Unit, onPickSensor: () -> Unit, onGuide: () -> 
 
         BigButton("Your plan: what to do and why", onGuide)
 
+        Section("Look") {
+            Text("E-ink is for e-paper screens: black and white, thick lines, nothing that moves.", style = MaterialTheme.typography.bodySmall, color = LocalStateColors.current.muted)
+            listOf("system" to "Same as the phone", "light" to "Light", "dark" to "Dark", "eink" to "E-ink").forEach { (key, label) ->
+                Choice(label, s.theme == key) { prefs.update { it.copy(theme = key) }; com.patrickreynolds.steady.Status.refresh(context) }
+            }
+        }
+
+        Section("Widget") {
+            Text("A small box on your home screen: what's left to do today, without opening Steady.", style = MaterialTheme.typography.bodyMedium)
+            val mgr = android.appwidget.AppWidgetManager.getInstance(context)
+            if (mgr.isRequestPinAppWidgetSupported) {
+                BigButton("Add to home screen", {
+                    mgr.requestPinAppWidget(android.content.ComponentName(context, com.patrickreynolds.steady.SteadyWidget::class.java), null, null)
+                })
+            } else {
+                Text("Long-press your home screen, tap Widgets, and find Steady.", style = MaterialTheme.typography.bodyLarge)
+            }
+        }
+
         Section("Strap") {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(s.sensorName ?: "None chosen", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
@@ -139,6 +158,19 @@ private fun Toggle(title: String, detail: String, value: Boolean, onChange: (Boo
     }
 }
 
+/** One option of several: a filled circle and a tick when chosen, so it reads without colour. */
+@Composable
+private fun Choice(label: String, chosen: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        androidx.compose.material3.RadioButton(selected = chosen, onClick = onClick)
+        Text(label + if (chosen) "  ✓" else "", style = if (chosen) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge)
+    }
+}
+
 @Composable
 private fun TimeRow(minutes: Int, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
@@ -152,7 +184,10 @@ private fun TimeRow(minutes: Int, onClick: () -> Unit) {
 fun SensorPickerScreen(onDone: () -> Unit, onBack: () -> Unit) {
     val context = LocalContext.current
     val prefs = remember { Prefs.get(context) }
-    val perms = arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
+    // Android 12+: Nearby devices. Android 11 and older (the Hisense A9): location, which Bluetooth scans needed then.
+    val perms = if (android.os.Build.VERSION.SDK_INT >= 31) arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
+    else arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+    val permName = if (android.os.Build.VERSION.SDK_INT >= 31) "Nearby devices" else "Location"
     fun granted() = perms.all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }
     var ok by remember { mutableStateOf(granted()) }
     var asked by remember { mutableStateOf(false) }
@@ -176,15 +211,16 @@ fun SensorPickerScreen(onDone: () -> Unit, onBack: () -> Unit) {
         Text("Wet the electrodes and put the strap on. It only shows up while you're wearing it.", style = MaterialTheme.typography.bodyLarge)
         when {
             !ok -> {
-                Text(if (asked) "Steady needs Nearby devices permission to find the strap." else "Allow Nearby devices to continue.", style = MaterialTheme.typography.bodyLarge)
+                Text(if (asked) "Steady needs $permName permission to find the strap." else "Allow $permName to continue.", style = MaterialTheme.typography.bodyLarge)
                 BigButton("Allow", { launcher.launch(perms) })
             }
             error != null -> Text(error!!, style = MaterialTheme.typography.bodyLarge, color = LocalStateColors.current.stop)
             else -> {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    CircularProgressIndicator(Modifier.padding(4.dp))
-                    Text("Searching…", style = MaterialTheme.typography.bodyLarge)
-                }
+                Busy("Searching…")
+                if (android.os.Build.VERSION.SDK_INT < 31) Text(
+                    "On this phone, Location must be switched on (quick settings) for the strap to show up. Steady never uses your location.",
+                    style = MaterialTheme.typography.bodySmall, color = LocalStateColors.current.muted,
+                )
                 found.forEach { f ->
                     Panel(Modifier.clickable {
                         prefs.update { it.copy(sensorAddress = f.address, sensorName = f.name, demoSensor = false) }

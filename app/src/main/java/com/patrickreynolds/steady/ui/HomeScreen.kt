@@ -71,7 +71,11 @@ fun HomeScreen(onStartReading: () -> Unit, onTrends: () -> Unit, onSettings: () 
 
         val firstReading = readings.filter { it.metrics.quality != Quality.POOR }.minOfOrNull { it.date }
         CheckIns.due(goodMornings, firstReading, today, settings.checkInsDone)?.let { c ->
-            CheckInPanel(c, onGuide) { prefs.update { it.copy(checkInsDone = it.checkInsDone + c.number) } }
+            CheckInPanel(c, onGuide) {
+                prefs.update { it.copy(checkInsDone = it.checkInsDone + c.number) }
+                com.patrickreynolds.steady.Status.cancelCheckInNotification(context)
+                com.patrickreynolds.steady.Status.refresh(context)
+            }
         }
 
         StatusPanel(goodMornings)
@@ -118,14 +122,14 @@ fun HomeScreen(onStartReading: () -> Unit, onTrends: () -> Unit, onSettings: () 
 
         InsightPanel(days, goodMornings)
 
-        OutlinedButton(onClick = onGuide, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp), shape = RoundedCornerShape(12.dp)) {
+        OutlinedButton(onClick = onGuide, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp), shape = RoundedCornerShape(12.dp), border = androidx.compose.foundation.BorderStroke(if (LocalEink.current) 2.dp else 1.dp, MaterialTheme.colorScheme.outline)) {
             Text("Your plan: what to do and why", style = MaterialTheme.typography.labelLarge)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(onClick = onTrends, modifier = Modifier.weight(1f).heightIn(min = 56.dp), shape = RoundedCornerShape(12.dp)) {
+            OutlinedButton(onClick = onTrends, modifier = Modifier.weight(1f).heightIn(min = 56.dp), shape = RoundedCornerShape(12.dp), border = androidx.compose.foundation.BorderStroke(if (LocalEink.current) 2.dp else 1.dp, MaterialTheme.colorScheme.outline)) {
                 Text("Trends", style = MaterialTheme.typography.labelLarge)
             }
-            OutlinedButton(onClick = onSettings, modifier = Modifier.weight(1f).heightIn(min = 56.dp), shape = RoundedCornerShape(12.dp)) {
+            OutlinedButton(onClick = onSettings, modifier = Modifier.weight(1f).heightIn(min = 56.dp), shape = RoundedCornerShape(12.dp), border = androidx.compose.foundation.BorderStroke(if (LocalEink.current) 2.dp else 1.dp, MaterialTheme.colorScheme.outline)) {
                 Text("Settings", style = MaterialTheme.typography.labelLarge)
             }
         }
@@ -144,7 +148,7 @@ private fun CheckInPanel(c: CheckIns.CheckIn, onGuide: () -> Unit, onDone: () ->
         )
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             BigButton("Done", onDone, Modifier.weight(1f))
-            OutlinedButton(onClick = onGuide, modifier = Modifier.weight(1f).heightIn(min = 60.dp), shape = RoundedCornerShape(12.dp)) {
+            OutlinedButton(onClick = onGuide, modifier = Modifier.weight(1f).heightIn(min = 60.dp), shape = RoundedCornerShape(12.dp), border = androidx.compose.foundation.BorderStroke(if (LocalEink.current) 2.dp else 1.dp, MaterialTheme.colorScheme.outline)) {
                 Text("Read plan", style = MaterialTheme.typography.labelLarge)
             }
         }
@@ -193,12 +197,7 @@ private fun RatingPanel(today: LocalDate, ratings: Map<LocalDate, Rating>, hasAn
     var changing by remember { mutableStateOf(false) }
     val now = LocalTime.now()
     val todayRating = ratings[today]
-    val askDate = when {
-        changing -> today
-        todayRating == null && now.hour >= 16 -> today
-        ratings[yesterday] == null && hasAnyData && now.hour < 16 -> yesterday
-        else -> null
-    }
+    val askDate = if (changing) today else com.patrickreynolds.steady.Today.askDate(today, now.hour, ratings, hasAnyData)
     if (askDate != null) {
         Panel {
             Text(if (askDate == today) "How was today?" else "How was yesterday?", style = MaterialTheme.typography.titleLarge)
@@ -231,7 +230,7 @@ private fun StepsPanel(asked: Boolean, onAsked: () -> Unit) {
         Text("Steady can use your phone's step counter. Nothing else to wear or do.", style = MaterialTheme.typography.bodyLarge)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             BigButton("Allow", { launcher.launch(Manifest.permission.ACTIVITY_RECOGNITION) }, Modifier.weight(1f))
-            OutlinedButton(onClick = onAsked, modifier = Modifier.weight(1f).heightIn(min = 60.dp), shape = RoundedCornerShape(12.dp)) {
+            OutlinedButton(onClick = onAsked, modifier = Modifier.weight(1f).heightIn(min = 60.dp), shape = RoundedCornerShape(12.dp), border = androidx.compose.foundation.BorderStroke(if (LocalEink.current) 2.dp else 1.dp, MaterialTheme.colorScheme.outline)) {
                 Text("Not now", style = MaterialTheme.typography.labelLarge)
             }
         }

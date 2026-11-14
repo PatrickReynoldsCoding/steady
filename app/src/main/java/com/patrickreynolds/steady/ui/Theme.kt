@@ -1,16 +1,21 @@
 package com.patrickreynolds.steady.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /** Good / warning / crash colours, kept apart from the brand colour. */
@@ -29,8 +34,21 @@ private val DarkState = StateColors(
     stop = Color(0xFFEA8585), stopSoft = Color(0xFF3A1C1D),
     muted = Color(0xFF9BA8B4),
 )
+/** E-ink: black ink on white paper. Meaning comes from words, ticks, borders and patterns, never colour. */
+private val EinkState = StateColors(
+    ok = Color.Black, okSoft = Color.White,
+    warn = Color.Black, warnSoft = Color.White,
+    stop = Color.Black, stopSoft = Color.White,
+    muted = Color.Black,
+)
 
 val LocalStateColors = staticCompositionLocalOf { LightState }
+
+/** True in E-ink mode: screens draw thick borders, patterns and no motion. */
+val LocalEink = staticCompositionLocalOf { false }
+
+/** Border width for panels and buttons: thicker on e-ink, where thin grey lines disappear. */
+val panelBorder: Dp @Composable get() = if (LocalEink.current) 3.dp else 1.dp
 
 private val Light = lightColorScheme(
     primary = Color(0xFF2C5A86), onPrimary = Color.White,
@@ -48,25 +66,58 @@ private val Dark = darkColorScheme(
     surfaceVariant = Color(0xFF1F2A35), onSurfaceVariant = Color(0xFF9BA8B4),
     outline = Color(0xFF2A3541),
 )
+private val Eink = lightColorScheme(
+    primary = Color.Black, onPrimary = Color.White,
+    primaryContainer = Color.White, onPrimaryContainer = Color.Black,
+    secondaryContainer = Color.Black, onSecondaryContainer = Color.White,
+    background = Color.White, onBackground = Color.Black,
+    surface = Color.White, onSurface = Color.Black,
+    surfaceVariant = Color.White, onSurfaceVariant = Color.Black,
+    surfaceContainerHighest = Color.White, surfaceContainerHigh = Color.White, surfaceContainer = Color.White,
+    outline = Color.Black, outlineVariant = Color.Black,
+)
 
 /** Larger than Material's defaults: easier to read on a foggy morning. */
-private val Type = Typography().let { t ->
+private fun type(eink: Boolean) = Typography().let { t ->
+    // E-ink: a size step up and heavier body text, which survives the panel's low contrast.
+    val body = if (eink) FontWeight.Medium else FontWeight.Normal
     t.copy(
         displaySmall = TextStyle(fontSize = 34.sp, lineHeight = 40.sp, fontWeight = FontWeight.Bold),
         headlineSmall = TextStyle(fontSize = 27.sp, lineHeight = 34.sp, fontWeight = FontWeight.Bold),
         titleLarge = TextStyle(fontSize = 23.sp, lineHeight = 30.sp, fontWeight = FontWeight.Bold),
         titleMedium = TextStyle(fontSize = 19.sp, lineHeight = 26.sp, fontWeight = FontWeight.Bold),
-        bodyLarge = TextStyle(fontSize = 19.sp, lineHeight = 28.sp),
-        bodyMedium = TextStyle(fontSize = 17.sp, lineHeight = 25.sp),
-        bodySmall = TextStyle(fontSize = 15.sp, lineHeight = 21.sp),
+        bodyLarge = TextStyle(fontSize = if (eink) 20.sp else 19.sp, lineHeight = 29.sp, fontWeight = body),
+        bodyMedium = TextStyle(fontSize = if (eink) 18.sp else 17.sp, lineHeight = 26.sp, fontWeight = body),
+        bodySmall = TextStyle(fontSize = if (eink) 16.sp else 15.sp, lineHeight = 22.sp, fontWeight = body),
         labelLarge = TextStyle(fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.Bold),
     )
 }
 
+enum class Look { LIGHT, DARK, EINK }
+
+/** Turns the "theme" setting into what to draw, following the phone for "system". */
 @Composable
-fun SteadyTheme(content: @Composable () -> Unit) {
-    val dark = isSystemInDarkTheme()
-    androidx.compose.runtime.CompositionLocalProvider(LocalStateColors provides if (dark) DarkState else LightState) {
-        MaterialTheme(colorScheme = if (dark) Dark else Light, typography = Type, content = content)
+fun lookFor(theme: String): Look = when (theme) {
+    "light" -> Look.LIGHT
+    "dark" -> Look.DARK
+    "eink" -> Look.EINK
+    else -> if (isSystemInDarkTheme()) Look.DARK else Look.LIGHT
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SteadyTheme(look: Look, content: @Composable () -> Unit) {
+    val eink = look == Look.EINK
+    CompositionLocalProvider(
+        LocalStateColors provides when (look) { Look.LIGHT -> LightState; Look.DARK -> DarkState; Look.EINK -> EinkState },
+        LocalEink provides eink,
+        // No ripples on e-ink: every animation frame is a slow, flickery screen refresh.
+        *(if (eink) arrayOf(LocalRippleConfiguration provides null) else emptyArray()),
+    ) {
+        MaterialTheme(
+            colorScheme = when (look) { Look.LIGHT -> Light; Look.DARK -> Dark; Look.EINK -> Eink },
+            typography = type(eink),
+            content = content,
+        )
     }
 }

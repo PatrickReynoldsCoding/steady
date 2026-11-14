@@ -30,7 +30,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.patrickreynolds.steady.analysis.DayRecord
@@ -63,7 +65,8 @@ fun TrendsScreen(onBack: () -> Unit) {
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(14, 30, 90).forEach { d ->
-                FilterChip(selected = range == d, onClick = { range = d }, label = { Text("$d days") })
+                FilterChip(selected = range == d, onClick = { range = d }, label = { Text(if (range == d) "✓ $d days" else "$d days") },
+                    border = if (LocalEink.current) androidx.compose.foundation.BorderStroke(2.dp, Color.Black) else null)
             }
         }
         Legend()
@@ -99,14 +102,32 @@ fun TrendsScreen(onBack: () -> Unit) {
 @Composable
 private fun Legend() {
     val s = LocalStateColors.current
-    @Composable fun item(color: Color, text: String) = Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Box(Modifier.size(14.dp).padding(1.dp)) { Canvas(Modifier.fillMaxSize()) { drawRect(color) } }
-        Text(text, style = MaterialTheme.typography.bodySmall, color = s.muted)
-    }
+    val eink = LocalEink.current
+    @Composable fun item(text: String, draw: androidx.compose.ui.graphics.drawscope.DrawScope.() -> Unit) =
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Box(Modifier.size(if (eink) 22.dp else 14.dp).padding(1.dp)) { Canvas(Modifier.fillMaxSize(), onDraw = draw) }
+            Text(text, style = MaterialTheme.typography.bodySmall, color = s.muted)
+        }
+    val normal = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
     Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        item(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f), "Your normal")
-        item(s.stop.copy(alpha = 0.35f), "Crash day")
-        item(s.warn.copy(alpha = 0.3f), "Bad day")
+        item("Your normal") {
+            if (eink) drawLine(Color.Black, Offset(0f, size.height / 2), Offset(size.width, size.height / 2), 2.dp.toPx(),
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 3.dp.toPx())))
+            else drawRect(normal)
+        }
+        item("Crash day") { if (eink) { hatch(0f, size.width, 5.dp.toPx(), 2.dp.toPx()); drawRect(Color.Black, style = Stroke(1.dp.toPx())) } else drawRect(s.stop.copy(alpha = 0.35f)) }
+        item("Bad day") { if (eink) { hatch(0f, size.width, 10.dp.toPx(), 1.5f.dp.toPx()); drawRect(Color.Black, style = Stroke(1.dp.toPx())) } else drawRect(s.warn.copy(alpha = 0.3f)) }
+    }
+}
+
+/** Diagonal black lines across a column of the chart: e-ink's stand-in for a colour fill. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.hatch(left: Float, width: Float, gap: Float, stroke: Float) {
+    clipRect(left, 0f, left + width, size.height) {
+        var x = left - size.height
+        while (x < left + width) {
+            drawLine(Color.Black, Offset(x, size.height), Offset(x + size.height, 0f), stroke)
+            x += gap
+        }
     }
 }
 
@@ -146,6 +167,7 @@ private fun Chart(points: List<Pair<LocalDate, Double>>, days: List<DayRecord>, 
     val line = MaterialTheme.colorScheme.primary
     val bandColor = line.copy(alpha = 0.16f)
     val grid = MaterialTheme.colorScheme.outline
+    val eink = LocalEink.current
     val crashDays = days.filter { it.rating == Rating.CRASH }.map { it.date }
     val badDays = days.filter { it.rating == Rating.BAD }.map { it.date }
     val values = points.map { it.second } + listOfNotNull(band?.first, band?.second)
@@ -161,13 +183,23 @@ private fun Chart(points: List<Pair<LocalDate, Double>>, days: List<DayRecord>, 
         fun y(v: Double) = (size.height * (1 - (v - yMin) / (yMax - yMin))).toFloat()
 
         drawLine(grid, Offset(0f, size.height), Offset(size.width, size.height), strokeWidth = 1.dp.toPx())
-        crashDays.forEach { d -> drawRect(s.stop.copy(alpha = 0.22f), Offset(x(d) - slot / 2, 0f), Size(slot, size.height)) }
-        badDays.forEach { d -> drawRect(s.warn.copy(alpha = 0.18f), Offset(x(d) - slot / 2, 0f), Size(slot, size.height)) }
-        band?.let { (a, b) -> drawRect(bandColor, Offset(0f, y(b)), Size(size.width, y(a) - y(b))) }
+        if (eink) {
+            // No colour on e-ink: crash days are densely hatched, bad days lightly, your normal is two dashed lines.
+            crashDays.forEach { d -> hatch(x(d) - slot / 2, slot, 7.dp.toPx(), 2.dp.toPx()) }
+            badDays.forEach { d -> hatch(x(d) - slot / 2, slot, 16.dp.toPx(), 1.5f.dp.toPx()) }
+            band?.let { (a, b) ->
+                val dash = PathEffect.dashPathEffect(floatArrayOf(10.dp.toPx(), 6.dp.toPx()))
+                listOf(y(a), y(b)).forEach { yy -> drawLine(Color.Black, Offset(0f, yy), Offset(size.width, yy), 2.dp.toPx(), pathEffect = dash) }
+            }
+        } else {
+            crashDays.forEach { d -> drawRect(s.stop.copy(alpha = 0.22f), Offset(x(d) - slot / 2, 0f), Size(slot, size.height)) }
+            badDays.forEach { d -> drawRect(s.warn.copy(alpha = 0.18f), Offset(x(d) - slot / 2, 0f), Size(slot, size.height)) }
+            band?.let { (a, b) -> drawRect(bandColor, Offset(0f, y(b)), Size(size.width, y(a) - y(b))) }
+        }
 
         val path = Path()
         points.forEachIndexed { i, (d, v) -> if (i == 0) path.moveTo(x(d), y(v)) else path.lineTo(x(d), y(v)) }
-        drawPath(path, line.copy(alpha = 0.7f), style = Stroke(2.dp.toPx()))
+        drawPath(path, if (eink) Color.Black else line.copy(alpha = 0.7f), style = Stroke((if (eink) 3 else 2).dp.toPx()))
         val r = (if (count > 40) 2.5f else 4f).dp.toPx()
         points.forEach { (d, v) -> drawCircle(line, r, Offset(x(d), y(v))) }
         points.lastOrNull()?.let { (d, v) -> drawCircle(line, r * 1.6f, Offset(x(d), y(v))) }

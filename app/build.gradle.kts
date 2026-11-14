@@ -20,11 +20,11 @@ android {
 
     defaultConfig {
         applicationId = "com.patrickreynolds.steady"
-        minSdk = 31          // Android 12: the user's phone, and the Bluetooth permission model
+        minSdk = 30          // Android 11: the Hisense A9 e-ink phone. The POCO runs 12.
         targetSdk = 35
         // -Psteady.versionCode / -Psteady.versionName: for testing in-app updates with an older-numbered build.
-        versionCode = (findProperty("steady.versionCode") as String?)?.toInt() ?: 2
-        versionName = (findProperty("steady.versionName") as String?) ?: "0.2.0"
+        versionCode = (findProperty("steady.versionCode") as String?)?.toInt() ?: 3
+        versionName = (findProperty("steady.versionName") as String?) ?: "0.3.0"
     }
     signingConfigs {
         if (signingProps.isNotEmpty()) create("release") {

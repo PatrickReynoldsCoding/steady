@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home-screen widget: a title and up to three lines of what needs doing. Colours are set in Status.views. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="8dp"
+    android:background="@drawable/widget_bg_light">
+    <TextView android:id="@+id/widget_title"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Steady" android:textSize="14sp" android:textStyle="bold" />
+    <TextView android:id="@+id/widget_row1" style="@style/WidgetRow" />
+    <TextView android:id="@+id/widget_row2" style="@style/WidgetRow" />
+    <TextView android:id="@+id/widget_row3" style="@style/WidgetRow" android:visibility="gone" />
+</LinearLayout>

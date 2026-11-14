@@ -52,7 +52,7 @@ Pace the way you normally do. Don't change anything because of the numbers. Stea
 
 ## Check-ins
 
-Steady shows a card on the home screen when a check-in is due. You don't need to remember them.
+Steady sends one notification and shows a card when a check-in is due. You don't need to remember them.
 
 1. **After 3 mornings: is it working?**
    Does the strap connect? Does the evening notification arrive? Is anything confusing or tiring?
@@ -75,6 +75,11 @@ Steady shows a card on the home screen when a check-in is due. You don't need to
 - **Strap not found:** wet it again and check it's snug. Close Polar Flow if it's open.
 - **"Too noisy":** wet the strap and try again. Or skip today.
 - **No evening notification:** in Android Settings, give Steady **Autostart** and set battery to **No restrictions**.
+
+## Helpful extras
+
+- **Widget:** Settings → Widget → **Add to home screen**. It shows what's left to do today.
+- **E-ink screen?** Settings → Look → **E-ink**. Black and white, thick lines, nothing moves.
 
 ## Updates
 

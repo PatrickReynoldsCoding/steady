@@ -173,8 +173,10 @@ class ReadingSession(app: Application) : AndroidViewModel(app) {
             Cue.DONE -> longArrayOf(0, 600)
         }
         runCatching {
-            getApplication<Application>().getSystemService(VibratorManager::class.java)
-                ?.defaultVibrator?.vibrate(VibrationEffect.createWaveform(pattern, -1))
+            val app = getApplication<Application>()
+            val vibrator = if (android.os.Build.VERSION.SDK_INT >= 31) app.getSystemService(VibratorManager::class.java)?.defaultVibrator
+            else @Suppress("DEPRECATION") app.getSystemService(android.os.Vibrator::class.java)
+            vibrator?.vibrate(VibrationEffect.createWaveform(pattern, -1))
         }
     }
 

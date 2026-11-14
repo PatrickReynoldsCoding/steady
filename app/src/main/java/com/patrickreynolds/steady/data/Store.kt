@@ -30,6 +30,8 @@ data class Reading(
 class Store private constructor(context: Context) :
     SQLiteOpenHelper(context, "steady.db", null, 1) {
 
+    private val app = context.applicationContext
+
     /** Bumped on every write so screens can reload. */
     private val _version = MutableStateFlow(0)
     val version: StateFlow<Int> = _version
@@ -53,7 +55,10 @@ class Store private constructor(context: Context) :
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
 
-    private fun changed() { _version.value++ }
+    private fun changed() {
+        _version.value++
+        com.patrickreynolds.steady.Status.refresh(app)   // the widget and check-in notification follow the data
+    }
 
     // ---- readings ----
 

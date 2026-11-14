@@ -11,7 +11,7 @@ The research behind it: [PEM Early Warning Research](https://claude.ai/artifact/
 **Using it?** Read [GUIDE.md](GUIDE.md): what to do each day, why, for how long, and when to check in.
 The same guide is in the app: *Your plan: what to do and why*.
 
-## Phase 1: Learn (0.1.0 and 0.2.0)
+## Phase 1: Learn (0.1.0 to 0.3.0)
 
 Steady gives no warnings yet. It collects the data that warnings need, and answers one question:
 *does my body show anything in the days before a crash?*
@@ -38,6 +38,20 @@ What it shows:
 - **Before a crash**: once 2 crashes are logged, plain sentences about how each signal compared
   with ordinary days, 1–3 days before a crash started.
 - **Export**: three CSV files (days, readings, raw beats). Everything else stays on the phone.
+
+## Also in 0.3.0
+
+- **Widget** (`Status.kt`, `Today.kt`): up to three lines of what needs doing (morning reading,
+  rating, a check-in or update). Settings → Widget → *Add to home screen*. Redrawn on every data
+  change, when the app opens, and by alarms at midnight, noon and 4 pm.
+- **Check-in notification**: one notification when a check-in becomes due (once each).
+- **E-ink look** (Settings → Look), after focus-tracker's E-ink theme: black on white, 3 dp
+  borders, no colour (crash days hatched densely, bad days lightly, your normal as dashed lines,
+  Crash marked ⚠ with a heavy border), no ripples or spinners, bold to-dos in the widget, and the
+  reading countdown moves in 5-second steps so the panel redraws less. The beeps stay: they are
+  how the reading works with your eyes closed.
+- **Android 11** (minSdk 30) for the Hisense A9: the old Bluetooth permissions and Location for
+  scanning there.
 
 ## How it works
 

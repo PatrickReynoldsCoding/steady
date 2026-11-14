@@ -4,7 +4,13 @@ import android.Manifest
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.graphics.Color as AndroidColor
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.compose.runtime.collectAsState
+import com.patrickreynolds.steady.data.Prefs
+import com.patrickreynolds.steady.ui.Look
+import com.patrickreynolds.steady.ui.lookFor
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -47,7 +53,20 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         handle(intent)
         Updater.checkIfDue(applicationContext)
-        setContent { SteadyTheme { SteadyApp(startReading) } }
+        setContent {
+            val settings by Prefs.get(this).settings.collectAsState()
+            val look = lookFor(settings.theme)
+            // Status bar icons follow the app's own look, which may differ from the phone's (e-ink, light, dark).
+            LaunchedEffect(look) {
+                enableEdgeToEdge(
+                    statusBarStyle = if (look == Look.DARK) SystemBarStyle.dark(AndroidColor.TRANSPARENT)
+                    else SystemBarStyle.light(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT),
+                    navigationBarStyle = if (look == Look.DARK) SystemBarStyle.dark(AndroidColor.TRANSPARENT)
+                    else SystemBarStyle.light(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT),
+                )
+            }
+            SteadyTheme(look) { SteadyApp(startReading) }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -58,6 +77,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         lifecycleScope.launch { PhoneSteps.sample(this@MainActivity) }
+        Status.refresh(this)
     }
 
     private fun handle(intent: Intent?) {

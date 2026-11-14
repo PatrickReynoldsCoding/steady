@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
@@ -57,7 +58,7 @@ fun ReadingScreen(session: ReadingSession, onClose: () -> Unit, onRetry: () -> U
             ReadingUi.Idle, ReadingUi.Connecting -> {
                 Title("Looking for your strap")
                 Body("Wet the electrodes, put the strap on, and lie down. Steady starts by itself when it finds it.")
-                CircularProgressIndicator(Modifier.size(56.dp))
+                if (!LocalEink.current) CircularProgressIndicator(Modifier.size(56.dp))
                 Spacer(Modifier.height(12.dp))
                 Secondary("Cancel", onClose)
             }
@@ -110,22 +111,27 @@ private fun Measuring(s: ReadingUi.Measuring, onClose: () -> Unit) {
     Title(title)
     Body(body)
     val ring = MaterialTheme.colorScheme.primary
-    val track = MaterialTheme.colorScheme.surfaceVariant
+    val eink = LocalEink.current
+    val track = if (eink) Color.Black else MaterialTheme.colorScheme.surfaceVariant
+    // E-ink: the count moves in steps of 5 seconds, so the screen redraws 12 times a minute, not 60.
+    val shownLeft = if (eink) ((s.secondsLeft + 4) / 5) * 5 else s.secondsLeft
     Box(Modifier.size(220.dp), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val stroke = 18.dp.toPx()
             val inset = stroke / 2
             val arc = Size(size.width - stroke, size.height - stroke)
-            drawArc(track, 0f, 360f, false, Offset(inset, inset), arc, style = Stroke(stroke))
-            val done = 1f - s.secondsLeft.toFloat() / s.phaseSeconds
+            // E-ink: a thin black track with a thick black arc, as there are no greys.
+            drawArc(track, 0f, 360f, false, Offset(inset, inset), arc, style = Stroke(if (eink) 3.dp.toPx() else stroke))
+            val done = 1f - shownLeft.toFloat() / s.phaseSeconds
             drawArc(ring, -90f, 360f * done, false, Offset(inset, inset), arc, style = Stroke(stroke, cap = StrokeCap.Round))
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("${s.secondsLeft}", fontSize = 64.sp, style = MaterialTheme.typography.displaySmall)
+            Text("$shownLeft", fontSize = 64.sp, style = MaterialTheme.typography.displaySmall)
             Text("seconds", style = MaterialTheme.typography.bodyMedium, color = states.muted)
         }
     }
-    Text(
+    // The live heart rate changes every second, so it is left off e-ink.
+    if (!eink) Text(
         if (s.hr != null) "Heart rate ${s.hr}" else "",
         style = MaterialTheme.typography.bodyLarge,
         color = states.muted,
@@ -148,6 +154,9 @@ private fun PhaseSteps(phase: Phase, includeStanding: Boolean) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (current) MaterialTheme.colorScheme.primary else LocalStateColors.current.muted,
                 fontSize = if (current) 18.sp else 16.sp,
+                // Bold and underlined, so the current step stands out on e-ink too.
+                fontWeight = if (current) androidx.compose.ui.text.font.FontWeight.Bold else null,
+                textDecoration = if (current) androidx.compose.ui.text.style.TextDecoration.Underline else null,
             )
         }
     }
@@ -171,6 +180,6 @@ private fun PhaseSteps(phase: Phase, includeStanding: Boolean) {
 }
 
 @Composable private fun Secondary(text: String, onClick: () -> Unit) =
-    OutlinedButton(onClick = onClick, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp), shape = RoundedCornerShape(12.dp)) {
+    OutlinedButton(onClick = onClick, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp), shape = RoundedCornerShape(12.dp), border = androidx.compose.foundation.BorderStroke(if (LocalEink.current) 2.dp else 1.dp, MaterialTheme.colorScheme.outline)) {
         Text(text, style = MaterialTheme.typography.labelLarge)
     }
